@@ -372,6 +372,7 @@ class MainFrame(wx.Frame):
 			self.logging(str(e))
 			raise e
 			return 0
+		
 		self.logging('Generating graph ... ', False)
 		plotlog.PlotLog(date, T1, T2, ('chamber', 'flange'), {'enable':True, 'file':figfile})
 		self.logging('Done')
