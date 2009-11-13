@@ -368,8 +368,9 @@ class MainFrame(wx.Frame):
 		addr = self.text_ctrl_gmail.GetValue()
 		try:
 			date, T1, T2 = plotlog.ReadLogFile(logfile)
-		except plotlog.NofileError as e:
+		except Exception as e:
 			self.logging(str(e))
+			raise e
 			return 0
 		self.logging('Generating graph ... ', False)
 		plotlog.PlotLog(date, T1, T2, ('chamber', 'flange'), {'enable':True, 'file':figfile})

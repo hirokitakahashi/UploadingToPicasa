@@ -12,6 +12,10 @@ class NofileError(Exception):
 	def __str__(self):
 		return 'file ' + self.file + ' not found'
 
+class FormatError(Exception):
+	def __str__(self):
+		return 'format error in file'
+
 def ReadLogFile(filename):
 	try:
 		f = open(filename, 'r')
@@ -36,8 +40,13 @@ def ReadLogFile(filename):
 			date, time, T1, T2= line.split()
 		T1list.append(T1)
 		T2list.append(T2)
-		d, m, y = [int(x) for x in date.split('/')]
-		h, mi = [int(x) for x in time.split(':')]
+		try:
+			d, m, y = [int(x) for x in date.split('/')]
+			h, mi = [int(x) for x in time.split(':')]
+		except:
+			err = FormatError()
+			raise err
+			return
 		datelist.append(date2num(datetime.datetime(y, m, d, h, mi, 0)))
 	f.close()
 	return (datelist, T1list, T2list)
