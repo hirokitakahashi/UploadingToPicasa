@@ -57,32 +57,43 @@ class UploadThread(Thread):
 		self.startTime = time.time()
 		self.lastTime = self.startTime
 		self.firstCall = True
-		self.immediate = self.frame.checkbox_2.GetValue()
 		self._state = self.State_Run
-		self.immediate = self.frame.checkbox_2.GetValue()
-		self.interval = self.frame.combo_box_1.GetValue()
+		self.GetValues()
 		self.start()
 		#self.frame.logging('New thread started')
+	
+	def GetValues(self):
+		self.immediate = self.frame.checkbox_2.GetValue()
+		interval = self.frame.combo_box_1.GetValue()
+		try:
+			i = int(interval)
+		except ValueError:
+			self.interval = None
+		else:
+			self.interval = i
 	
 	def run(self):
 		while True:
 			# if the thread is in running state 
 			if self._state == self.State_Run:
-				#self.frame.statusbar.SetStatusText('running')
 				now, check = self.check_interval()
-				if self.firstCall and self.immediate:
-					try:
-						self.frame.UploadFile()
-					except:
-						wx.PostEvent(self.frame, MsgEvent(self.Msg_Error, 'Uploading error'))
-					else:
-						wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
-					finally:
-						self.lastTime = now
-						self.firstCall = False
+				if self.firstCall:
+					if self.immediate:
+						try:
+							self.frame.UploadFile()
+						except:
+							wx.PostEvent(self.frame, MsgEvent(self.Msg_Error, 'Uploading error'))
+						else:
+							wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
+							
 						if check == self.State_Run_Blank:
-							wx.PostEvent(self.frame, MsgEvent(self.Msg_Else, 'Next upload was not scheduled'))
+							wx.PostEvent(self.frame, MsgEvent(self.Msg_Else, 'Next upload is not scheduled'))
 							self.abort()
+					else:
+						wx.PostEvent(self.frame, MsgEvent(self.Msg_Else, 'Next upload is scheduled at %s' % time.strftime('%H:%M',time.localtime(now + 60*self.interval))))
+				
+					self.lastTime = now
+					self.firstCall = False
 				elif check == self.State_Run_Go:
 					try:
 						self.frame.UploadFile()
@@ -92,7 +103,7 @@ class UploadThread(Thread):
 						wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
 					finally:
 						self.lastTime = now
-				time.sleep(1)
+					time.sleep(1)
 			# if the thread is aborted
 			elif self._state == self.State_Abort:
 				wx.PostEvent(self.frame, MsgEvent(self.Msg_Abort, 'Aborted'))
@@ -118,22 +129,20 @@ class UploadThread(Thread):
 		return
 	
 	def restart(self):
+		self.GetValues()
+		self.firstCall = True
+		self._state = self.State_Run
+			
 		if self._state == self.State_Abort:
-			self._state = self.State_Run
-			self.firstCall = True
-			self.immediate = self.frame.checkbox_2.GetValue()
 			self.restartEvt.set()
 			self.restartEvt.clear()
 		elif self._state == self.State_Term:
-			self._state = self.State_Run
-			self.firstCall = True
-			self.immediate = self.frame.checkbox_2.GetValue()
 			self.run()
 	
 	def check_interval(self):
 		#interval = self.frame.combo_box_1.GetValue()
 		interval = self.interval
-		if interval == '':
+		if interval == None:
 			#self.frame.logging('Combo box is blank')
 			#self.frame.logging('Next uploading is not scheduled')
 			#self.abort()
