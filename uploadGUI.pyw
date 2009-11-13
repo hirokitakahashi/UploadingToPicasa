@@ -73,19 +73,21 @@ class UploadThread(Thread):
 					else:
 						try:
 							self.frame.UploadFile()
-						except gdata.photos.service.GooglePhotosException:
+						except:
 							wx.PostEvent(self.frame, MsgEvent(self.Msg_Error, 'Uploading error'))
 						else:
 							wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
+						finally:
 							self.lastTime = now
 							self.firstCall = False
 				elif check == self.State_Run_Go:
 					try:
 						self.frame.UploadFile()
-					except gdata.photos.service.GooglePhotosException:
+					except:
 						wx.PostEvent(self.frame, MsgEvent(self.Msg_Error, 'Uploading error'))
 					else:
 						wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
+					finally:
 						self.lastTime = now
 				time.sleep(1)
 			# if the thread is aborted
@@ -319,7 +321,8 @@ class MainFrame(wx.Frame):
 	def on_msg(self, event):
 		'''Show message'''
 		if event.msg:
-			self.statusbar.SetStatusText(event.msg)
+			# self.statusbar.SetStatusText(event.msg)
+			self.logging(event.msg)
 			
 	def on_close(self, event):
 		if self.thread:
