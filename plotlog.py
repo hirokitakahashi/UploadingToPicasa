@@ -16,6 +16,10 @@ class FormatError(Exception):
 	def __str__(self):
 		return 'format error in file'
 
+class TimeStampError(Exception):
+	def __str__(self):
+		return 'Invalid time stamps '
+
 def ReadLogFile(filename):
 	try:
 		f = open(filename, 'r')
@@ -62,6 +66,11 @@ def PlotLog(datelist, T1list, T2list, legendStrings=('T1', 'T2'), saveFile={'ena
 	
 	# Ticks format depending on the time elapsed
 	hour_elapsed = 24*(datelist[-1]-datelist[0])
+	if hour_elapsed == 0:
+		err = TimeStampError()
+		raise err
+		return
+	
 	if hour_elapsed > 24:
 		TimeFmt = matplotlib.dates.DateFormatter('%d/%m %H:%M')
 		TimeLoc = matplotlib.dates.HourLocator(interval=6)
