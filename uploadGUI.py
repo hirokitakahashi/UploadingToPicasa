@@ -46,6 +46,7 @@ class UploadThread(Thread):
 	Msg_Success = wx.NewId()
 	Msg_Abort = wx.NewId()
 	Msg_Error = wx.NewId()
+	Msg_Else = wx.NewId()
 	
 	lock = Lock() # variable used as a lock
 	restartEvt = Event()	# variable used as a flag
@@ -56,7 +57,9 @@ class UploadThread(Thread):
 		self.startTime = time.time()
 		self.lastTime = self.startTime
 		self.firstCall = True
+		self.immediate = self.frame.checkbox_2.GetValue()
 		self._state = self.State_Run
+		self.immediate = self.frame.checkbox_2.GetValue()
 		self.interval = self.frame.combo_box_1.GetValue()
 		self.start()
 		#self.frame.logging('New thread started')
@@ -67,19 +70,19 @@ class UploadThread(Thread):
 			if self._state == self.State_Run:
 				#self.frame.statusbar.SetStatusText('running')
 				now, check = self.check_interval()
-				if self.firstCall:
-					if check == self.State_Run_Blank:
-						self.abort()
+				if self.firstCall and self.immediate:
+					try:
+						self.frame.UploadFile()
+					except:
+						wx.PostEvent(self.frame, MsgEvent(self.Msg_Error, 'Uploading error'))
 					else:
-						try:
-							self.frame.UploadFile()
-						except:
-							wx.PostEvent(self.frame, MsgEvent(self.Msg_Error, 'Uploading error'))
-						else:
-							wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
-						finally:
-							self.lastTime = now
-							self.firstCall = False
+						wx.PostEvent(self.frame, MsgEvent(self.Msg_Success, 'File uploaded'))
+					finally:
+						self.lastTime = now
+						self.firstCall = False
+						if check == self.State_Run_Blank:
+							wx.PostEvent(self.frame, MsgEvent(self.Msg_Else, 'Next upload was not scheduled'))
+							self.abort()
 				elif check == self.State_Run_Go:
 					try:
 						self.frame.UploadFile()
@@ -118,11 +121,13 @@ class UploadThread(Thread):
 		if self._state == self.State_Abort:
 			self._state = self.State_Run
 			self.firstCall = True
+			self.immediate = self.frame.checkbox_2.GetValue()
 			self.restartEvt.set()
 			self.restartEvt.clear()
 		elif self._state == self.State_Term:
 			self._state = self.State_Run
 			self.firstCall = True
+			self.immediate = self.frame.checkbox_2.GetValue()
 			self.run()
 	
 	def check_interval(self):
@@ -163,6 +168,8 @@ class MainFrame(wx.Frame):
 		self.text_ctrl_photo = wx.TextCtrl(self, -1, "")
 		self.label_checkbox = wx.StaticText(self, -1, "periodic")
 		self.checkbox_1 = wx.CheckBox(self, -1, "")
+		self.label_checkbox_2 = wx.StaticText(self, -1, "immediate upload", style=wx.ALIGN_RIGHT)
+		self.checkbox_2 = wx.CheckBox(self, -1, "")
 		self.label_interval = wx.StaticText(self, -1, "interval")
 		self.combo_box_1 = wx.ComboBox(self, -1, choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "15", "20", "30", "60", "90", "120"], style=wx.CB_DROPDOWN)
 		self.label_last = wx.StaticText(self, -1, "last upload")
@@ -205,6 +212,7 @@ class MainFrame(wx.Frame):
 		self.text_ctrl_album.SetMinSize((180, 20))
 		self.text_ctrl_photo.SetMinSize((180, 20))
 		self.label_checkbox.SetMinSize((37, 13))
+		self.label_checkbox_2.SetMinSize((83, 13))
 		self.combo_box_1.SetMinSize((50, 21))
 		self.combo_box_1.SetSelection(-1)
 		self.text_ctrl_last.SetMinSize((110, 20))
@@ -220,6 +228,8 @@ class MainFrame(wx.Frame):
 		sizer_middle_lower = wx.BoxSizer(wx.HORIZONTAL)
 		sizer_middle_right = wx.BoxSizer(wx.VERTICAL)
 		grid_sizer_3 = wx.FlexGridSizer(3, 2, 0, 0)
+		sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_4 = wx.BoxSizer(wx.HORIZONTAL)
 		grid_sizer_1 = wx.FlexGridSizer(4, 2, 0, 0)
 		grid_sizer_2 = wx.FlexGridSizer(2, 3, 0, 0)
 		grid_sizer_2.Add(self.label_datafile, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
@@ -238,8 +248,12 @@ class MainFrame(wx.Frame):
 		grid_sizer_1.Add(self.label_photo, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 		grid_sizer_1.Add(self.text_ctrl_photo, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 4)
 		sizer_middle_lower.Add(grid_sizer_1, 5, wx.EXPAND, 0)
-		grid_sizer_3.Add(self.label_checkbox, 0, wx.ALL|wx.ALIGN_RIGHT, 2)
-		grid_sizer_3.Add(self.checkbox_1, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 3)
+		sizer_4.Add(self.label_checkbox, 0, wx.ALL|wx.ALIGN_RIGHT, 2)
+		sizer_4.Add(self.checkbox_1, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 3)
+		grid_sizer_3.Add(sizer_4, 1, wx.EXPAND, 0)
+		sizer_5.Add(self.label_checkbox_2, 0, wx.ALL|wx.ALIGN_RIGHT, 2)
+		sizer_5.Add(self.checkbox_2, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 3)
+		grid_sizer_3.Add(sizer_5, 1, wx.EXPAND, 0)
 		grid_sizer_3.Add(self.label_interval, 0, wx.ALL|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, 2)
 		grid_sizer_3.Add(self.combo_box_1, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 3)
 		grid_sizer_3.Add(self.label_last, 0, wx.ALL|wx.ALIGN_RIGHT, 2)
@@ -374,7 +388,13 @@ class MainFrame(wx.Frame):
 			return 0
 		
 		self.logging('Generating graph ... ', False)
-		plotlog.PlotLog(date, T1, T2, ('chamber', 'flange'), {'enable':True, 'file':figfile})
+		try:
+			plotlog.PlotLog(date, T1, T2, ('chamber', 'flange'), {'enable':True, 'file':figfile})
+		except Exception as e:
+			self.logging(str(e))
+			raise e
+			return 0
+		
 		self.logging('Done')
 	
 		if not 'gd' in self.__dict__:
